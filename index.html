@@ -937,29 +937,32 @@
     let bannerImages = [];
 
     function loadBannerImages(callback) {
-      const EXTS = ["webp", "png", "jpg", "jpeg"];
-      const images = [];
-      let n = 1;
+  const EXTS = ["webp", "png", "jpg", "jpeg"];
+  const images = []; let n = 1;
+  let callbackCalled = false; // 이미 callback 호출했는지 체크
 
-      function tryLoad(extIdx) {
-        if (extIdx >= EXTS.length) {
-          bannerImages = images;
-          callback();
-          return;
-        }
-
-        const img = new Image();
-        img.onload = () => {
-          images.push(img);
-          n += 1;
-          tryLoad(0);
-        };
-        img.onerror = () => tryLoad(extIdx + 1);
-        img.src = `banners/${n}.${EXTS[extIdx]}`;
-      }
-
-      tryLoad(0);
+  function tryLoad(extIdx) {
+    if (extIdx >= EXTS.length) {
+      bannerImages = images;
+      if (!callbackCalled) { callbackCalled = true; callback(); } // 종료 시에도 호출
+      return;
     }
+    const img = new Image();
+    img.onload = () => {
+      images.push(img);
+      bannerImages = images; // 로드될 때마다 바로 반영
+      if (!callbackCalled && images.length >= 20) {
+        callbackCalled = true;
+        callback(); // 20개 되면 먼저 화면에 표시
+      }
+      n++;
+      tryLoad(0);
+    };
+    img.onerror = () => tryLoad(extIdx + 1);
+    img.src = `banners/${n}.${EXTS[extIdx]}`;
+  }
+  tryLoad(0);
+}
 
     const tileCanvas = document.getElementById("tile-canvas");
     const tileCtx = tileCanvas.getContext("2d");
