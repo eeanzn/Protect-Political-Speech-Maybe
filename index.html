@@ -936,32 +936,39 @@
 
     let bannerImages = [];
 
-    function loadBannerImages(callback) {
+function loadBannerImages(callback) {
   const EXTS = ["webp", "png", "jpg", "jpeg"];
-  const images = []; let n = 1;
-  let callbackCalled = false; // 이미 callback 호출했는지 체크
+  const TOTAL = 360; // 전체 파일 수
+  const LOAD_COUNT = 30; // 불러올 개수
 
-  function tryLoad(extIdx) {
-    if (extIdx >= EXTS.length) {
+  // 1~360 중 30개 랜덤 선택
+  const indices = [];
+  while (indices.length < LOAD_COUNT) {
+    const n = Math.floor(Math.random() * TOTAL) + 1;
+    if (!indices.includes(n)) indices.push(n);
+  }
+
+  const images = [];
+  let i = 0;
+
+  function loadNext() {
+    if (i >= indices.length) {
       bannerImages = images;
-      if (!callbackCalled) { callbackCalled = true; callback(); } // 종료 시에도 호출
+      callback();
       return;
     }
-    const img = new Image();
-    img.onload = () => {
-      images.push(img);
-      bannerImages = images; // 로드될 때마다 바로 반영
-      if (!callbackCalled && images.length >= 20) {
-        callbackCalled = true;
-        callback(); // 20개 되면 먼저 화면에 표시
-      }
-      n++;
-      tryLoad(0);
-    };
-    img.onerror = () => tryLoad(extIdx + 1);
-    img.src = `banners/${n}.${EXTS[extIdx]}`;
+    const n = indices[i];
+    function tryLoad(extIdx) {
+      if (extIdx >= EXTS.length) { i++; loadNext(); return; }
+      const img = new Image();
+      img.onload = () => { images.push(img); i++; loadNext(); };
+      img.onerror = () => tryLoad(extIdx + 1);
+      img.src = `banners/${n}.${EXTS[extIdx]}`;
+    }
+    tryLoad(0);
   }
-  tryLoad(0);
+
+  loadNext();
 }
 
     const tileCanvas = document.getElementById("tile-canvas");
