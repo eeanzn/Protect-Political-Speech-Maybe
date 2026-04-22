@@ -1,0 +1,1544 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Protect Political Speech... Maybe?</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;700&amp;display=swap" rel="stylesheet">
+  <script src="config.js"></script>
+  <style>
+    :root {
+      --header-height: 40px;
+      --ui-gap: 4px;
+      --ui-offset: 16px;
+      --panel-offset: 60px;
+      --slider-height: 156px;
+      --header-r: 255;
+      --header-g: 161;
+      --header-b: 0;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      font-family: "IBM Plex Sans KR", sans-serif;
+      background: #000;
+      color: #fff;
+    }
+
+    html.info-open,
+    html.info-open body {
+      overflow: hidden;
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    #sv-wrapper {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+    }
+
+    #streetview {
+      width: 100%;
+      height: 100%;
+    }
+
+    #blend-container {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      pointer-events: none;
+      mix-blend-mode: exclusion;
+    }
+
+    #banner-container {
+      position: absolute;
+      inset: 0;
+    }
+
+    #tile-canvas {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .building-banner {
+      position: absolute;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .building-banner canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    #main-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--header-height);
+      z-index: 40;
+      overflow: hidden;
+      pointer-events: none;
+      background: var(--header-color);
+      border-bottom: 1px solid #fff;
+      isolation: isolate;
+    }
+
+    .marquee-window {
+      position: relative;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    #header-marquee-track {
+      display: flex;
+      width: max-content;
+      min-width: 200%;
+      animation: marquee-scroll 150s linear infinite;
+      will-change: transform;
+    }
+
+    .marquee-block {
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+      min-width: max-content;
+      height: 100%;
+    }
+
+    .marquee-segment {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      padding: 0 36px;
+      font-family: "IBM Plex Sans KR", sans-serif;
+      font-style: normal;
+      font-synthesis: none;
+      font-size: 18px;
+      font-weight: 450;
+      line-height: 37px;
+      white-space: nowrap;
+      color: #000;
+      text-align: center;
+      text-shadow:
+      -1px -1px 0 #fff,
+      1px -1px 0 #fff,
+      -1px  1px 0 #fff,
+      1px  1px 0 #fff;
+      /* -webkit-text-stroke-width: 1px;
+      -webkit-text-stroke-color: #FFF;
+      -webkit-text-stroke-position: outside; */
+      text-rendering: optimizeLegibility;
+    }
+
+    .ui-stack {
+      position: fixed;
+      z-index: 45;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--ui-gap);
+    }
+
+    #left-controls {
+      top: 60px;
+      left: var(--ui-offset);
+    }
+
+    #right-controls-top {
+      top: 60px;
+      right: var(--ui-offset);
+    }
+
+    #right-controls-bottom {
+      right: var(--ui-offset);
+      bottom: 61px;
+    }
+
+    .asset-btn {
+      position: relative;
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      transition: filter 0.12s ease;
+    }
+
+    .asset-btn:hover,
+    .asset-btn:active {
+      filter: invert(1);
+    }
+
+    .asset-btn img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    #slider-group {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      width: 40px;
+      height: 156px;
+      padding: 0;
+      min-width: 40px;
+      user-select: none;
+      -webkit-user-select: none;
+      border: 1px solid #fff;
+      background: #000;
+    }
+
+    .slider-caption {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 9px;
+      line-height: 11px;
+      letter-spacing: -0.099px;
+      text-align: center;
+      color: rgba(255, 255, 255, 0.92);
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+      white-space: nowrap;
+    }
+
+    #slider-group .slider-caption:first-of-type {
+      top: 6px;
+    }
+
+    #slider-group .slider-caption:last-of-type {
+      bottom: 6px;
+    }
+
+    #blend-slider-shell {
+      position: absolute;
+      inset: 0;
+      width: 40px;
+      height: 156px;
+      border: none;
+      background: transparent;
+      outline: none;
+      touch-action: none;
+      cursor: ns-resize;
+    }
+
+    #blend-slider-shell:focus-visible #blend-slider-pinch {
+      box-shadow: 0 0 0 1px #fff, 0 0 0 5px rgba(255, 255, 255, 0.16);
+    }
+
+    #blend-slider-bar {
+      position: absolute;
+      top: 28px;
+      bottom: 26px;
+      left: 50%;
+      width: 1px;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.96);
+      box-shadow: none;
+    }
+
+    #blend-slider-pinch {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 26px;
+      height: 8px;
+      border: 1px solid #fff;
+      background: #000;
+      transform: translate(-50%, -50%);
+      cursor: grab;
+      touch-action: none;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
+    }
+
+    #blend-slider-pinch:active {
+      cursor: grabbing;
+    }
+
+    #blend-slider-value {
+      display: none;
+    }
+
+    #info-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.24s ease;
+      background: rgba(0, 0, 0, 0.86);
+      backdrop-filter: blur(14px) saturate(110%);
+    }
+
+    #info-overlay.is-open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .info-surface {
+      position: absolute;
+      inset: 0;
+      background: #000;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #info-close {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      z-index: 2;
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    #info-close::before,
+    #info-close::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 50%;
+      width: 1px;
+      height: 24px;
+      background: #fff;
+      transform-origin: center;
+    }
+
+    #info-close::before {
+      transform: translateX(-50%) rotate(45deg);
+    }
+
+    #info-close::after {
+      transform: translateX(-50%) rotate(-45deg);
+    }
+
+    .info-body {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(280px, 1.04fr) minmax(300px, 1fr) minmax(220px, 0.86fr);
+      grid-template-rows: 1fr auto;
+      grid-template-areas:
+        "logo copy refs"
+        "footer copy refs";
+      gap: 32px;
+      padding: 12px 16px 16px;
+      overflow: hidden;
+    }
+
+    .info-col-logo {
+      grid-area: logo;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+      padding-top: 4px;
+    }
+
+    .info-logo-wrap {
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .info-logo-wrap img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      object-position: left top;
+    }
+
+    .info-col-copy {
+      grid-area: copy;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    .info-col-refs {
+      grid-area: refs;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    .info-col-footer {
+      grid-area: footer;
+      align-self: end;
+      padding-bottom: 4px;
+    }
+
+    .info-copy,
+    .info-references,
+    .info-footer {
+      font-size: 16px;
+      font-weight: 500;
+      line-height: 32px;
+      letter-spacing: -0.154px;
+      color: #fff;
+    }
+
+    .info-copy {
+      white-space: pre-wrap;
+    }
+
+    .info-copy p,
+    .info-references p {
+      margin: 0;
+    }
+
+    .info-copy p {
+      text-indent: 20px;
+    }
+
+    .info-footer {
+      display: grid;
+      grid-template-columns: max-content max-content;
+      column-gap: 68px;
+      row-gap: 0;
+      line-height: 19px;
+      white-space: nowrap;
+    }
+
+    .info-footer-label,
+    .info-footer-value {
+      font-size: 14px;
+      line-height: 19px;
+      letter-spacing: -0.154px;
+    }
+
+    .info-footer-link {
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    .info-footer-link a {
+      color: inherit;        /* 부모 색상 그대로 */
+      text-decoration: none; /* 밑줄 제거 */
+}
+
+    @keyframes marquee-scroll {
+      from { transform: translateX(0); }
+      to { transform: translateX(-50%); }
+    }
+
+    /* info - 1020 */
+    @media (max-width: 1020px) {
+      :root {
+        --ui-offset: 14px;
+        --panel-offset: 60px;
+        --slider-height: 156px;
+      }
+
+      .info-body {
+        display: flex;
+        flex-direction: column;
+        max-width: 616px;
+        margin-left: auto;
+        overflow-y: auto;
+        overflow-x: hidden;
+      }
+
+      .info-col-logo {
+        position: sticky; top: 0;
+        overflow: visible;
+        flex-shrink: 0;
+        padding-top: 0;
+        min-height: unset;
+      }
+
+      .info-logo-wrap {
+        flex: none;
+        aspect-ratio: 370 / 97;
+        width: 100%;
+        min-height: unset;
+      }
+
+      .info-col-copy,
+      .info-col-refs {
+        overflow-y: visible;
+        overflow-x: visible;
+      }
+
+      .info-col-footer {
+        align-self: auto;
+        padding-bottom: 16px;
+      }
+
+      .info-footer {
+        column-gap: 68px;
+      }
+    }
+
+    /* info - 640 */
+    @media (max-width: 640px) {
+      :root {
+        --header-height: 36px;
+        --ui-gap: 6px;
+        --ui-offset: 12px;
+        --panel-offset: 60px;
+        --slider-height: 152px;
+      }
+
+      .asset-btn {
+        width: 38px;
+        height: 38px;
+      }
+
+      .marquee-segment {
+        padding: 0 20px;
+        font-size: 14px;
+      }
+
+      .info-body {
+        max-width: none;
+        margin-left: 0;
+        padding: 16px;
+      }
+
+      .info-footer {
+        column-gap: 28px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="sv-wrapper">
+    <div id="streetview"></div>
+  </div>
+
+  <div id="blend-container">
+    <div id="banner-container">
+      <canvas id="tile-canvas"></canvas>
+    </div>
+  </div>
+
+  <header id="main-header" aria-label="Main header">
+    <div class="marquee-window">
+      <div id="header-marquee-track"></div>
+    </div>
+  </header>
+
+  <div id="left-controls" class="ui-stack" aria-label="Language and info controls">
+    <button class="asset-btn" id="lang-btn" type="button">
+      <img id="lang-btn-icon" src="web-assets/btn-lang-en.svg" alt=""/>
+      <span class="visually-hidden">Switch language</span>
+    </button>
+    <button class="asset-btn" id="info-btn" type="button">
+      <img src="web-assets/btn-info.svg" alt=""/>
+      <span class="visually-hidden">Open info</span>
+    </button>
+  </div>
+
+  <div id="right-controls-top" class="ui-stack" aria-label="Mode, slider and reset controls">
+    <button class="asset-btn" id="mode-btn" type="button">
+      <img id="mode-btn-icon" src="web-assets/btn-trashphysics.svg" alt=""/>
+      <span class="visually-hidden">Toggle interaction mode</span>
+    </button>
+
+    <div id="slider-group" role="group" aria-label="Blend slider group">
+      <span class="slider-caption" data-ko="지도" data-en="Map">지도</span>
+      <div
+        id="blend-slider-shell"
+        role="slider"
+        tabindex="0"
+        aria-orientation="vertical"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        aria-valuenow="50"
+        aria-label="Blend amount"
+      >
+        <div id="blend-slider-bar"></div>
+        <div id="blend-slider-pinch"></div>
+        <span id="blend-slider-value">50</span>
+      </div>
+      <span class="slider-caption" data-ko="현수막" data-en="Banner">현수막</span>
+    </div>
+
+    <button class="asset-btn" id="reset-btn" type="button">
+      <img src="web-assets/btn-reset.svg" alt=""/>
+      <span class="visually-hidden">Reset blend value</span>
+    </button>
+  </div>
+
+  <div id="right-controls-bottom" class="ui-stack" aria-label="Zoom controls">
+    <button class="asset-btn" id="zoom-in" type="button">
+      <img src="web-assets/btn-zoomin.svg" alt=""/>
+      <span class="visually-hidden">Zoom in</span>
+    </button>
+    <button class="asset-btn" id="zoom-out" type="button">
+      <img src="web-assets/btn-zoomout.svg" alt=""/>
+      <span class="visually-hidden">Zoom out</span>
+    </button>
+  </div>
+
+  <div id="info-overlay" aria-hidden="true">
+    <div class="info-surface">
+      <button id="info-close" type="button">
+        <span class="visually-hidden">Close info</span>
+      </button>
+
+      <div class="info-body">
+        <div class="info-col-logo">
+          <div class="info-logo-wrap">
+            <img id="info-logo" src="web-assets/LOGO.svg" alt="Protect Political Speech... Maybe?"/>
+          </div>
+        </div>
+
+        <div class="info-col-copy">
+          <div class="info-copy" id="info-copy"></div>
+        </div>
+
+        <div class="info-col-refs">
+          <div class="info-references" id="info-references"></div>
+        </div>
+
+        <div class="info-col-footer">
+          <div class="info-footer" id="info-footer"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const ASSET_PATHS = {
+      langKo: "web-assets/btn-lang-ko.svg",
+      langEn: "web-assets/btn-lang-en.svg",
+      modeSpread: "web-assets/btn-spreadscreen.svg",
+      modeTrashPhysics: "web-assets/btn-trashphysics.svg",
+      logo: "web-assets/LOGO.svg",
+    };
+
+    const HEADER_COPY = {
+      ko: "옥외광고물법에서는 정당법 제37조 (활동의 자유)를 보장한다는 빌미로 현수막 규제를 풀면서 정당 정치활동에 유리하게 적용하고 있다. 제8조(적용 배제) ① 다음 각 호의 어느 하나에 해당하면 허가·신고에 관한 제3조 및 금지·제한 등에 관한 제4조를 적용하지 아니한다. 1.~7. (생략) 8. 정당이「정당법」제37조제2항에 따른 통상적인 정당활동으로 보장되는 정당의 정책이나 정치적 현안에 대하여 표시·설치하는 경우.",
+      en: "Under the Outdoor Advertising Act, regulations on banners are being relaxed under the pretext of guaranteeing “freedom of activities” as stipulated in Article 37 of the Political Parties Act, thereby favoring party political activities. Article 8 (Exemption from Application) (1) Where any of the following applies, Article 3 (regarding permission and 신고) and Article 4 (regarding prohibitions and restrictions) shall not apply: 1.–7. (omitted). In cases where a political party displays or installs content concerning its policies or political issues as part of ordinary party activities guaranteed under Article 37(2) of the Political Parties Act.",
+    };
+
+    const INFO_CONTENT = {
+      ko: {
+        paragraphs: [
+          "23년 3월 경, 대구의 한 지역 신문에서는 다음과 같은 기사를 냈습니다. ‘대구 서구에 거주하는 A씨는 “정치 현수막이 너무 늘어난 것 같다. 온 동네가 정치 현수막에 둘러싸여 있는 느낌이라 피로감이 든다”며 그리 유익한 내용도 아니고 서로 자기들 말만 맞다는 식이라 눈살을 찌푸리게 된다”고 토로했다. 대구 동구의 한 초등학교 경비원 B씨는 “여러 정당끼리 매번 뗐다 붙였다 한다. 일주일에 한 번꼴로 바뀌니 이제 신경도 안 쓰일 지경”이라고 말했다.’",
+          "정당은 “정당법에 의한 정치적 자유 보장”을 빌미로 그들에게 유리한 조건으로 규제를 해소함으로써 실질적 본질이었던 선전의 기능을 흐리게 하고, 공공 공간을 독점적으로 점유함으로써 반복되는 시각공해를 낳고 있습니다. 이로 인해 도심에 난립하는 현수막의 정치적 메세지는 대개 대중에게 읽히지 않고 일종의 자극적 쓰레기로 전락하지 않았는지 생각해봅니다.",
+          "현수막이 불필요하다는 것을 말하는 것은 아님을 분명히 하고자 합니다. 정쟁은 잠시 거두고, 국민들에게 도움되는 정책 홍보나 민생 지원 등에 대한 내용을 담으려는 노력도 분명히 있었습니다. 허나 시간이 지나면서 우리가 보는 현수막의 모습은 어떤가요? 사유에서 멀어진 사람들이 부풀려지고 재생산된 정보를 통해 새로운 공해를 낳으면서도 그것을 처리할 환경은 조성되지 못한 사회, 그 일면이 현재의 정당 현수막과 다름없지 않은가요? 진정한 정책의 선전은 퇴색되어가고 있습니다.",
+          "본 웹에서는 이러한 사고를 중심으로 규제를 반복적으로 풀고 이내 완전히 해제된 세상을 가정하여 현수막이 도심과 마을 전체를 장악하듯 점유하고, 이로부터 난립하는 표현들을 확인해보고자 합니다. 이를 통한 일종의 디자인 언어는 일상 속 주변의 쓰레기를 덧씌우며 선전에서 멀어진 풍조의 가시화를 이끌고자 합니다.",
+          "본 웹의 표현적 실험은 대한민국 내 거대 양당(더불어민주당, 국민의힘)의 현수막 원본 파일을 가지고서 실행했습니다. 여타 소수 정당의 경우 현수막 자료의 불분명한 수집처, 제한된 제공량, 그리고 시간적 한계로 인해 흔히 빅텐트라고 일컬어지는 거대 양당의 현수막 파일만을 가지고서 작업하였음을 남겨둡니다.",
+        ],
+        referencesTitle: "참고자료",
+      },
+      en: {
+        paragraphs: [
+          "Around March 2023, a local newspaper in Daegu reported the following: resident A from Seo-gu said political banners had increased too much, making the whole neighborhood feel surrounded by campaign signage and producing a kind of visual fatigue because the messages were not especially useful and mostly repeated partisan claims. An elementary school guard in Dong-gu also noted that parties were constantly taking banners down and putting them back up, so often that the weekly turnover no longer even registered.",
+          "By invoking the guarantee of political freedom under the Political Parties Act, parties have loosened regulations in ways that favor them, blurring the original function of advocacy while monopolizing public space and producing repeated visual pollution. Because of this, the political messages carried by banners that flood the city are rarely read carefully by the public and instead fall into the status of provocative visual waste.",
+          "This is not to say banners are unnecessary. There were clear efforts to include policy promotion and practical civic support rather than pure partisan conflict. But what do the banners we actually see now look like? When people who have drifted away from public reflection inflate and reproduce information that creates new pollution without building the environment to process it, the current party banner landscape begins to mirror that condition. Genuine policy communication is fading.",
+          "This web project imagines a world in which regulation is repeatedly loosened and eventually lifted altogether, allowing banners to occupy entire cities and neighborhoods. From that condition, the work tries to reveal the expressions that proliferate. The design language overlays everyday trash onto the scene in order to visualize a social climate that has drifted away from persuasion and toward residue.",
+          "The visual experiment in this web piece was executed using original banner files from the two dominant political parties in South Korea, the Democratic Party and the People Power Party. For smaller parties, unclear collection sources, limited availability, and time constraints meant the work proceeded with the banner files of those two major parties, often described as the big tent parties.",
+        ],
+        referencesTitle: "References",
+      },
+      references: [
+        "류예지. (2023. 03. 29). 도심 곳곳 난무하는 정치 현수막 ‘눈살’. 《대구신문》",
+        "임성빈. (2026.03.06). 불법 ‘정당 현수막’ 10만개 넘었다…지방선거 ‘현수막 공해’ 우려. 《중앙일보》",
+        "레몬컴퍼니. (2025. 9. 4). 현수막 정치, 이젠 끝내자!. 《입법평론》",
+        "고한솔, 엄지원. (2023.11.07). “빚, 혼자 고민 마세요”…혐오 펼침막 난립 속 민생정치 돋보인 진보당《한겨레》",
+        "김윤나영, 탁지영. (2023.11.17). 민주당, 2030 겨냥 ‘정치는 모르겠고 나는 잘 살고 싶어’ 현수막 논란《경향신문》",
+        "김정환. (2026.04.09). 정부 비판 현수막에 파란색 쓴 국힘… \"어느 당인지 헷갈려\".《조선일보》",
+      ],
+      footer: [
+        ["from", "이현준 HyunJun Lee", false],
+        ["email", "eeanzn@duck.com", true],
+        ["instagram", "@eeanzn", true],
+      ],
+    };
+
+    const UI_EXCLUSION_SELECTORS = "#main-header, #left-controls, #right-controls-top, #right-controls-bottom, #info-overlay";
+
+    const BANNER_ASPECT_W = 500;
+    const BANNER_ASPECT_H = 90;
+    const BANNER_COUNT = 10000;
+    const MAX_RENDER = 80;
+    const MIN_RADIUS = 5;
+    const MAX_RADIUS = 1000;
+    const MIN_ALT = 1;
+    const MAX_ALT = 8;
+    const B_ASPECT = BANNER_ASPECT_W / BANNER_ASPECT_H;
+    const FOV_MARGIN = 1.3;
+
+    const headerTrack = document.getElementById("header-marquee-track");
+    const langBtn = document.getElementById("lang-btn");
+    const langBtnIcon = document.getElementById("lang-btn-icon");
+    const infoBtn = document.getElementById("info-btn");
+    const modeBtn = document.getElementById("mode-btn");
+    const modeBtnIcon = document.getElementById("mode-btn-icon");
+    const resetBtn = document.getElementById("reset-btn");
+    const zoomInBtn = document.getElementById("zoom-in");
+    const zoomOutBtn = document.getElementById("zoom-out");
+    const sliderShell = document.getElementById("blend-slider-shell");
+    const sliderPinch = document.getElementById("blend-slider-pinch");
+    const sliderValueLabel = document.getElementById("blend-slider-value");
+    const infoOverlay = document.getElementById("info-overlay");
+    const infoCloseBtn = document.getElementById("info-close");
+    const infoLogo = document.getElementById("info-logo");
+    const infoCopy = document.getElementById("info-copy");
+    const infoReferences = document.getElementById("info-references");
+    const infoFooter = document.getElementById("info-footer");
+
+    let currentLang = "ko";
+    let isTrashMode = false;
+    let blendValue = 50;
+    let isDraggingSlider = false;
+    let trashSVGs = [];
+    let trashInteractionEnabled = false;
+
+    const PAL = Array.from({ length: 200 }, () => ({
+      r: Math.floor(Math.random() * 256),
+      g: Math.floor(Math.random() * 256),
+      b: Math.floor(Math.random() * 256),
+    }));
+
+    function renderHeaderMarquee() {
+      const message = HEADER_COPY[currentLang];
+      const block = Array.from({ length: 6 }, () => {
+        return `<span class="marquee-segment">${message}</span>`;
+      }).join("");
+
+      headerTrack.innerHTML = `
+        <div class="marquee-block">${block}</div>
+        <div class="marquee-block" aria-hidden="true">${block}</div>
+      `;
+    }
+
+    function renderInfoContent() {
+      const langBlock = INFO_CONTENT[currentLang];
+      infoCopy.innerHTML = langBlock.paragraphs.map((paragraph) => `<p>${paragraph}</p>`).join("");
+      infoReferences.innerHTML = [
+        `<p>${langBlock.referencesTitle}</p>`,
+        ...INFO_CONTENT.references.map((reference) => `<p>${reference}</p>`),
+      ].join("");
+      infoFooter.innerHTML = INFO_CONTENT.footer.map(([label, value, linked]) => `
+        <span class="info-footer-label">${label}</span>
+        <span class="info-footer-value${linked ? " info-footer-link" : ""}">
+          ${linked
+      ? `<a href="${
+            label === "email"
+              ? "mailto:eeanzn@duck.com"
+              : "https://www.instagram.com/eeanzn/"
+          }" target="_blank">${value}</a>`
+      : value
+    }
+  </span>
+      `).join("");
+    }
+
+    function applyLocalizedText() {
+      document.querySelectorAll("[data-ko]").forEach((element) => {
+        element.textContent = currentLang === "ko" ? element.dataset.ko : element.dataset.en;
+      });
+    }
+
+    function updateAriaLabels() {
+      const isKorean = currentLang === "ko";
+
+      langBtn.setAttribute("aria-label", isKorean ? "Switch to English" : "Switch to Korean");
+      infoBtn.setAttribute("aria-label", isKorean ? "정보 오버레이 열기" : "Open info overlay");
+      infoCloseBtn.setAttribute("aria-label", isKorean ? "정보 오버레이 닫기" : "Close info overlay");
+      resetBtn.setAttribute("aria-label", isKorean ? "혼합 비율 초기화" : "Reset blend amount");
+      zoomInBtn.setAttribute("aria-label", isKorean ? "확대" : "Zoom in");
+      zoomOutBtn.setAttribute("aria-label", isKorean ? "축소" : "Zoom out");
+      sliderShell.setAttribute("aria-label", isKorean ? "혼합 비율 조절" : "Blend amount");
+    }
+
+    function updateModeButton() {
+      if (isTrashMode) {
+        modeBtnIcon.src = ASSET_PATHS.modeSpread;
+        modeBtn.setAttribute("aria-label", currentLang === "ko" ? "Spread 모드로 전환" : "Switch to spread mode");
+      } else {
+        modeBtnIcon.src = ASSET_PATHS.modeTrashPhysics;
+        modeBtn.setAttribute("aria-label", currentLang === "ko" ? "Trash Physics 모드로 전환" : "Switch to trash physics mode");
+      }
+    }
+
+    function updateLangButton() {
+      langBtnIcon.src = currentLang === "ko" ? ASSET_PATHS.langEn : ASSET_PATHS.langKo;
+    }
+
+    function setLang(lang) {
+      currentLang = lang;
+      document.documentElement.lang = currentLang;
+      applyLocalizedText();
+      renderHeaderMarquee();
+      renderInfoContent();
+      updateLangButton();
+      updateModeButton();
+      updateAriaLabels();
+    }
+
+    function isInfoOpen() {
+      return infoOverlay.classList.contains("is-open");
+    }
+
+    function openInfoOverlay() {
+      infoOverlay.classList.add("is-open");
+      infoOverlay.setAttribute("aria-hidden", "false");
+      document.documentElement.classList.add("info-open");
+    }
+
+    function closeInfoOverlay() {
+      infoOverlay.classList.remove("is-open");
+      infoOverlay.setAttribute("aria-hidden", "true");
+      document.documentElement.classList.remove("info-open");
+    }
+
+    function updateSliderVisuals() {
+      const shellHeight = sliderShell.clientHeight || 1;
+      const pinchHeight = sliderPinch.offsetHeight || 8;
+      const trackTop = 28;
+      const trackBottom = 26;
+      const minY = trackTop + pinchHeight / 2;
+      const maxY = shellHeight - trackBottom - pinchHeight / 2;
+      const y = minY + (maxY - minY) * (1 - blendValue / 100);
+      sliderPinch.style.top = `${y}px`;
+      sliderValueLabel.style.top = `${y}px`;
+      sliderValueLabel.textContent = String(blendValue);
+      sliderShell.setAttribute("aria-valuenow", String(blendValue));
+    }
+
+    function applyBlend(value) {
+      const tileEl = document.getElementById("blend-container");
+      const svEl = document.getElementById("sv-wrapper");
+
+      if (value <= 50) {
+        tileEl.style.opacity = "1";
+        svEl.style.opacity = (value / 50).toFixed(2);
+      } else {
+        tileEl.style.opacity = (1 - (value - 50) / 50).toFixed(2);
+        svEl.style.opacity = "1";
+      }
+    }
+
+    function setBlendValue(nextValue) {
+      blendValue = Math.max(0, Math.min(100, Math.round(nextValue)));
+      updateSliderVisuals();
+      applyBlend(blendValue);
+    }
+
+    function updateBlendFromPointer(clientY) {
+      const rect = sliderShell.getBoundingClientRect();
+      const trackTop = 28;
+      const trackBottom = 26;
+      const usableHeight = rect.height - trackTop - trackBottom;
+      const normalized = (clientY - rect.top - trackTop) / usableHeight;
+      const ratio = 1 - normalized;
+      setBlendValue(ratio * 100);
+    }
+
+    function isUiTarget(target) {
+      return Boolean(target.closest(UI_EXCLUSION_SELECTORS));
+    }
+
+    const startHue = Math.random() * 360;
+    function startHeaderChroma() {
+      function tick(time) {
+      const hue = (startHue + time * 0.05) % 360; // 시간에 따라 0→360 순환
+      document.documentElement.style.setProperty("--header-color", `hsl(${hue}, 100%, 50%)`);
+      requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    }
+
+    langBtn.addEventListener("click", () => {
+      setLang(currentLang === "ko" ? "en" : "ko");
+    });
+
+    infoBtn.addEventListener("click", openInfoOverlay);
+    infoCloseBtn.addEventListener("click", closeInfoOverlay);
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && isInfoOpen()) {
+        closeInfoOverlay();
+      }
+    });
+
+    sliderShell.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      isDraggingSlider = true;
+      sliderShell.setPointerCapture?.(event.pointerId);
+      updateBlendFromPointer(event.clientY);
+    });
+
+    window.addEventListener("pointermove", (event) => {
+      if (!isDraggingSlider) return;
+      updateBlendFromPointer(event.clientY);
+    });
+
+    window.addEventListener("pointerup", () => {
+      isDraggingSlider = false;
+    });
+
+    sliderShell.addEventListener("keydown", (event) => {
+      switch (event.key) {
+        case "ArrowUp":
+        case "ArrowRight":
+          event.preventDefault();
+          setBlendValue(blendValue + 1);
+          break;
+        case "ArrowDown":
+        case "ArrowLeft":
+          event.preventDefault();
+          setBlendValue(blendValue - 1);
+          break;
+        case "Home":
+          event.preventDefault();
+          setBlendValue(0);
+          break;
+        case "End":
+          event.preventDefault();
+          setBlendValue(100);
+          break;
+        default:
+          break;
+      }
+    });
+
+    let bannerImages = [];
+
+    function loadBannerImages(callback) {
+      const EXTS = ["webp", "png", "jpg", "jpeg"];
+      const images = [];
+      let n = 1;
+
+      function tryLoad(extIdx) {
+        if (extIdx >= EXTS.length) {
+          bannerImages = images;
+          callback();
+          return;
+        }
+
+        const img = new Image();
+        img.onload = () => {
+          images.push(img);
+          n += 1;
+          tryLoad(0);
+        };
+        img.onerror = () => tryLoad(extIdx + 1);
+        img.src = `Banners/${n}.${EXTS[extIdx]}`;
+      }
+
+      tryLoad(0);
+    }
+
+    const tileCanvas = document.getElementById("tile-canvas");
+    const tileCtx = tileCanvas.getContext("2d");
+    let tileLayout = null;
+
+    function getBannerSize() {
+      const bw = Math.max(40, screen.width * 0.05);
+      return { bw, bh: Math.round((bw * BANNER_ASPECT_H) / BANNER_ASPECT_W) };
+    }
+
+    function buildTileLayout() {
+      const { bw, bh } = getBannerSize();
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const rows = Math.ceil((vh + bh) / bh);
+      const cols = Math.ceil((vw + bw * 2) / bw) + 1;
+      const cells = [];
+
+      for (let r = 0; r < rows; r += 1) {
+        const offsetX = (Math.random() * 2 - 1) * bw;
+        const imgIdx = Math.floor(Math.random() * Math.max(1, bannerImages.length));
+        const palIdx = Math.floor(Math.random() * PAL.length);
+
+        for (let c = 0; c < cols; c += 1) {
+          cells.push({
+            x: offsetX + c * bw,
+            y: r * bh,
+            bw,
+            bh,
+            imgIdx: (imgIdx + c) % Math.max(1, bannerImages.length),
+            palIdx: (palIdx + c) % PAL.length,
+          });
+        }
+      }
+
+      tileLayout = { cells };
+    }
+
+    function renderTileCanvas(holeRects) {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      tileCanvas.width = vw;
+      tileCanvas.height = vh;
+      tileCtx.clearRect(0, 0, vw, vh);
+
+      if (!tileLayout) buildTileLayout();
+
+      tileLayout.cells.forEach((cell) => {
+        if (bannerImages.length > 0) {
+          tileCtx.drawImage(bannerImages[cell.imgIdx], cell.x, cell.y, cell.bw, cell.bh);
+        } else {
+          const p = PAL[cell.palIdx];
+          tileCtx.fillStyle = `rgb(${p.r},${p.g},${p.b})`;
+          tileCtx.fillRect(cell.x, cell.y, cell.bw, cell.bh);
+        }
+      });
+
+      holeRects.forEach((rect) => tileCtx.clearRect(rect.x, rect.y, rect.w, rect.h));
+    }
+
+    function getMaxBannerW() {
+      return window.innerWidth * 0.21;
+    }
+
+    const bannerContainer = document.getElementById("banner-container");
+    const bannerEls = Array.from({ length: MAX_RENDER }, () => {
+      const el = document.createElement("div");
+      el.className = "building-banner";
+      el.style.display = "none";
+      el.appendChild(document.createElement("canvas"));
+      bannerContainer.appendChild(el);
+      return el;
+    });
+
+    const elCache = new Array(MAX_RENDER).fill(-1);
+
+    function updateBannerEl(index, x, y, w, h, imgIdx) {
+      const el = bannerEls[index];
+      const canvas = el.firstChild;
+      el.style.cssText = `display:block;left:${x}px;top:${y}px;width:${w}px;height:${h}px;position:absolute;pointer-events:none;overflow:hidden;`;
+
+      const cw = Math.max(1, Math.round(w));
+      const ch = Math.max(1, Math.round(h));
+
+      if (canvas.width !== cw || canvas.height !== ch || elCache[index] !== imgIdx) {
+        canvas.width = cw;
+        canvas.height = ch;
+        elCache[index] = imgIdx;
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, cw, ch);
+
+        if (bannerImages.length > 0) {
+          ctx.drawImage(bannerImages[imgIdx % bannerImages.length], 0, 0, cw, ch);
+        } else {
+          const p = PAL[imgIdx % PAL.length];
+          ctx.fillStyle = `rgb(${p.r},${p.g},${p.b})`;
+          ctx.fillRect(0, 0, cw, ch);
+        }
+      }
+    }
+
+    function hideBannerEl(index) {
+      bannerEls[index].style.display = "none";
+    }
+
+    let ALL_BANNERS = [];
+
+    function generateAllBanners(lat0, lng0) {
+      const radius = 6371000;
+      ALL_BANNERS = [];
+      const occupied = [];
+
+      function overlaps(ch, cp, hR, pR) {
+        return occupied.some((item) => Math.abs(item.ch - ch) < (item.hR + hR) / 2 && Math.abs(item.cp - cp) < (item.pR + pR) / 2);
+      }
+
+      let attempts = 0;
+
+      while (ALL_BANNERS.length < BANNER_COUNT && attempts < BANNER_COUNT * 3) {
+        attempts += 1;
+        const angle = Math.random() * Math.PI * 2;
+        const isNear = Math.random() < 0.3;
+        const dist = isNear ? MIN_RADIUS + Math.random() * 45 : 50 + Math.random() * (MAX_RADIUS - 50);
+        const dLat = (dist * Math.cos(angle)) / radius * (180 / Math.PI);
+        const dLng = (dist * Math.sin(angle)) / (radius * Math.cos(lat0 * Math.PI / 180)) * (180 / Math.PI);
+        const lat = lat0 + dLat;
+        const lng = lng0 + dLng;
+        const bw = isNear ? 1 + Math.random() * 4 : 3 + Math.random() * 10;
+        const bh = bw / B_ASPECT;
+        const alt = ALL_BANNERS.length % 2 === 0
+          ? MIN_ALT + Math.random() * (isNear ? 4 : MAX_ALT - MIN_ALT)
+          : -2 + Math.random() * 3;
+        const perp = Math.atan2(-dLng, -dLat) + Math.PI / 2;
+        const hw = bw / 2;
+        const dxLat = (hw * Math.cos(perp)) / radius * (180 / Math.PI);
+        const dxLng = (hw * Math.sin(perp)) / (radius * Math.cos(lat * Math.PI / 180)) * (180 / Math.PI);
+        const ch = (Math.atan2(dLng * Math.cos(lat0 * Math.PI / 180), dLat) * 180 / Math.PI + 360) % 360;
+        const cp = Math.atan2(alt, dist) * 180 / Math.PI;
+        const hR = Math.atan2(bw / 2, dist) * 180 / Math.PI * 2;
+        const pR = Math.atan2(bh / 2, dist) * 180 / Math.PI * 2;
+
+        if (overlaps(ch, cp, hR, pR)) continue;
+
+        occupied.push({ ch, cp, hR, pR });
+        ALL_BANNERS.push({
+          c0: { lat: lat - dxLat, lng: lng - dxLng, alt: alt + bh },
+          c1: { lat: lat + dxLat, lng: lng + dxLng, alt: alt + bh },
+          c2: { lat: lat + dxLat, lng: lng + dxLng, alt },
+          c3: { lat: lat - dxLat, lng: lng - dxLng, alt },
+          ch,
+          cp,
+          cd: dist,
+          isNear,
+          ii: ALL_BANNERS.length % 200,
+        });
+      }
+    }
+
+    function llaToHP(pos, target) {
+      const radius = 6371000;
+      const dx = (target.lng - pos.lng) * Math.PI / 180 * Math.cos(pos.lat * Math.PI / 180) * radius;
+      const dy = (target.lat - pos.lat) * Math.PI / 180 * radius;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      return {
+        h: (Math.atan2(dx, dy) * 180 / Math.PI + 360) % 360,
+        p: Math.atan2(target.alt || 0, dist) * 180 / Math.PI,
+      };
+    }
+
+    function hpToPx(hp, pov, zoom, vw, vh) {
+      const fov = 180 / Math.pow(2, zoom);
+      let deltaHeading = hp.h - pov.heading;
+      if (deltaHeading > 180) deltaHeading -= 360;
+      if (deltaHeading < -180) deltaHeading += 360;
+      const scale = vw / fov;
+      return {
+        x: vw / 2 + deltaHeading * scale,
+        y: vh / 2 - (hp.p - pov.pitch) * scale,
+      };
+    }
+
+    function getVisibleBanners(pov, zoom) {
+      const fov = 180 / Math.pow(2, zoom);
+      const halfHorizontal = (fov * FOV_MARGIN) / 2;
+      const halfVertical = (fov * FOV_MARGIN / (window.innerWidth / window.innerHeight)) / 2;
+      const visible = [];
+
+      for (let i = 0; i < ALL_BANNERS.length; i += 1) {
+        const banner = ALL_BANNERS[i];
+        let deltaHeading = banner.ch - pov.heading;
+        if (deltaHeading > 180) deltaHeading -= 360;
+        if (deltaHeading < -180) deltaHeading += 360;
+        if (Math.abs(deltaHeading) < halfHorizontal && Math.abs(banner.cp - pov.pitch) < halfVertical) {
+          visible.push(banner);
+        }
+      }
+
+      const near = visible.filter((banner) => banner.isNear).sort((a, b) => a.cd - b.cd).slice(0, 25);
+      const far = visible.filter((banner) => !banner.isNear).sort((a, b) => a.cd - b.cd).slice(0, 55);
+      return [...near, ...far];
+    }
+
+    let panorama;
+    let rafId = null;
+    let frameCount = 0;
+
+    function render() {
+      if (!panorama) return;
+      if (rafId) cancelAnimationFrame(rafId);
+
+      rafId = requestAnimationFrame(() => {
+        const panoPos = panorama.getPosition();
+        if (!panoPos) return;
+
+        const pov = panorama.getPov();
+        const zoom = panorama.getZoom();
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const pos = { lat: panoPos.lat(), lng: panoPos.lng() };
+        const visible = getVisibleBanners(pov, zoom);
+        const holeRects = [];
+
+        for (let i = 0; i < MAX_RENDER; i += 1) {
+          if (i >= visible.length) {
+            hideBannerEl(i);
+            continue;
+          }
+
+          const banner = visible[i];
+          const p0 = hpToPx(llaToHP(pos, banner.c0), pov, zoom, vw, vh);
+          const p1 = hpToPx(llaToHP(pos, banner.c1), pov, zoom, vw, vh);
+          const p2 = hpToPx(llaToHP(pos, banner.c2), pov, zoom, vw, vh);
+          const p3 = hpToPx(llaToHP(pos, banner.c3), pov, zoom, vw, vh);
+          const minX = Math.min(p0.x, p1.x, p2.x, p3.x);
+          const maxX = Math.max(p0.x, p1.x, p2.x, p3.x);
+          const minY = Math.min(p0.y, p1.y, p2.y, p3.y);
+          const maxY = Math.max(p0.y, p1.y, p2.y, p3.y);
+
+          if (maxX < -vw || minX > vw * 2 || maxY < -vh || minY > vh * 2) {
+            hideBannerEl(i);
+            continue;
+          }
+
+          let w = maxX - minX;
+          let h = maxY - minY;
+
+          if (w < 2 || h < 2) {
+            hideBannerEl(i);
+            continue;
+          }
+
+          const maxW = getMaxBannerW();
+          if (w > maxW) {
+            const scale = maxW / w;
+            w *= scale;
+            h *= scale;
+          }
+
+          updateBannerEl(i, minX, minY, w, h, banner.ii);
+          holeRects.push({ x: minX, y: minY, w, h });
+        }
+
+        renderTileCanvas(holeRects);
+      });
+    }
+
+    function setMode(trash) {
+      isTrashMode = trash;
+      updateModeButton();
+
+      if (trash) {
+        trashInteractionEnabled = true;
+      } else {
+        bannerContainer.style.webkitMaskImage = "none";
+        bannerContainer.style.maskImage = "none";
+        trashInteractionEnabled = false;
+      }
+    }
+
+    modeBtn.addEventListener("click", () => {
+      setMode(!isTrashMode);
+    });
+
+    window.addEventListener("resize", () => {
+      updateSliderVisuals();
+    });
+
+    (g => {
+      let h;
+      let a;
+      let k;
+      const p = "The Google Maps JavaScript API";
+      const c = "google";
+      const l = "importLibrary";
+      const q = "__ib__";
+      const m = document;
+      let b = window;
+      b = b[c] || (b[c] = {});
+      const d = b.maps || (b.maps = {});
+      const r = new Set();
+      const e = new URLSearchParams();
+      const u = () => h || (h = new Promise(async (f, n) => {
+        await (a = m.createElement("script"));
+        e.set("libraries", [...r] + "");
+        for (k in g) e.set(k.replace(/[A-Z]/g, t => `_${t[0].toLowerCase()}`), g[k]);
+        e.set("callback", `${c}.maps.${q}`);
+        a.src = `https://maps.${c}apis.com/maps/api/js?${e}`;
+        d[q] = f;
+        a.onerror = () => h = n(Error(`${p} could not load.`));
+        a.nonce = m.querySelector("script[nonce]")?.nonce || "";
+        m.head.append(a);
+      }));
+      d[l] ? console.warn(`${p} only loads once. Ignoring:`, g) : d[l] = (f, ...n) => r.add(f) && u().then(() => d[l](f, ...n));
+    })({ key: CONFIG.GOOGLE_MAPS_API_KEY, v: "weekly" });
+
+    async function initMap() {
+      const { StreetViewPanorama } = await google.maps.importLibrary("streetView");
+
+      panorama = new StreetViewPanorama(document.getElementById("streetview"), {
+        position: { lat: 37.565652, lng: 126.982687 },
+        pov: { heading: 180, pitch: 0 },
+        zoom: 1,
+      });
+
+      window.panorama = panorama;
+
+      const sv = document.getElementById("streetview");
+      const cleanStyle = () => {
+        sv.style.removeProperty("position");
+        sv.style.removeProperty("background-color");
+        sv.style.removeProperty("overflow");
+      };
+
+      cleanStyle();
+      new MutationObserver(cleanStyle).observe(sv, { attributes: true, attributeFilter: ["style"] });
+
+      const UI_HIDE = [".gm-iv-address", ".gm-fullscreen-control", ".gm-svpc", ".gm-bundled-control"];
+      function hideGoogleUI() {
+        UI_HIDE.forEach((selector) => {
+          sv.querySelectorAll(selector).forEach((el) => el.style.setProperty("display", "none", "important"));
+        });
+      }
+
+      new MutationObserver(hideGoogleUI).observe(sv, { childList: true, subtree: true });
+      hideGoogleUI();
+
+      setBlendValue(50);
+
+      resetBtn.addEventListener("click", () => {
+        setBlendValue(50);
+      });
+
+      zoomInBtn.addEventListener("click", () => {
+        panorama.setZoom(Math.min(panorama.getZoom() + 1, 3));
+      });
+
+      zoomOutBtn.addEventListener("click", () => {
+        panorama.setZoom(Math.max(panorama.getZoom() - 1, 0));
+      });
+
+      panorama.addListener("pov_changed", () => {
+        frameCount += 1;
+        if (frameCount % 10 === 0) tileLayout = null;
+        render();
+      });
+
+      panorama.addListener("position_changed", () => {
+        const p = panorama.getPosition();
+        if (p) {
+          generateAllBanners(p.lat(), p.lng());
+          tileLayout = null;
+          frameCount = 0;
+        }
+        render();
+      });
+
+      loadBannerImages(() => {
+        const p = panorama.getPosition();
+        if (p) generateAllBanners(p.lat(), p.lng());
+        render();
+      });
+    }
+
+    initMap();
+
+    let resizeTimer;
+    window.addEventListener("resize", () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        tileLayout = null;
+        render();
+      }, 150);
+    });
+  </script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+  <script>
+    const { Engine, Bodies, Composite } = Matter;
+
+    const TRASH_DEFAULT_EM = 0.3;
+
+    function loadTrashSVGs(callback) {
+      const loaded = [];
+      let n = 1;
+
+      function tryLoad() {
+        const img = new Image();
+        const index = n;
+        img.onload = () => {
+          loaded.push({ img, index });
+          n += 1;
+          tryLoad();
+        };
+        img.onerror = () => {
+          trashSVGs = loaded;
+          callback();
+        };
+        img.src = `trashes_svg/trash${n}.svg`;
+      }
+
+      tryLoad();
+    }
+
+    const maskSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    maskSVG.style.cssText = "position:fixed;inset:0;width:0;height:0;overflow:hidden;";
+    maskSVG.innerHTML = `<defs><mask id="trash-mask"></mask></defs>`;
+    document.body.appendChild(maskSVG);
+    const trashMask = maskSVG.querySelector("#trash-mask");
+
+    const engine = Engine.create({ gravity: { x: 0, y: 1.5 } });
+    const world = engine.world;
+    const trashBodies = new Map();
+    let boundaries = [];
+
+    function updateBoundaries() {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      boundaries.forEach((body) => Composite.remove(world, body));
+      boundaries = [
+        Bodies.rectangle(vw / 2, vh + 25, vw + 100, 50, { isStatic: true }),
+        Bodies.rectangle(-25, vh / 2, 50, vh * 3, { isStatic: true }),
+        Bodies.rectangle(vw + 25, vh / 2, 50, vh * 3, { isStatic: true }),
+      ];
+      Composite.add(world, boundaries);
+    }
+
+    updateBoundaries();
+
+    function dropTrash(x) {
+      if (trashSVGs.length === 0 || !isTrashMode) return;
+
+      const item = trashSVGs[Math.floor(Math.random() * trashSVGs.length)];
+      const em = Math.min(window.innerWidth, window.innerHeight);
+      const size = em * (0.1 + Math.random() * (TRASH_DEFAULT_EM - 0.1));
+      const nw = item.img.naturalWidth || 100;
+      const nh = item.img.naturalHeight || 100;
+      const scale = size / Math.max(nw, nh);
+      const w = nw * scale;
+      const h = nh * scale;
+      const posX = x !== undefined ? x : Math.random() * window.innerWidth;
+
+      const body = Bodies.rectangle(posX, -h, w, h, {
+        restitution: 0.3,
+        friction: 0.5,
+        frictionAir: 0.01,
+        angle: (Math.random() - 0.5) * Math.PI,
+      });
+
+      trashBodies.set(body.id, { img: item.img, w, h });
+      Composite.add(world, body);
+
+      const all = Composite.allBodies(world).filter((bodyItem) => !bodyItem.isStatic);
+      if (all.length > 200) {
+        const oldest = all[0];
+        trashBodies.delete(oldest.id);
+        Composite.remove(world, oldest);
+      }
+    }
+
+    const SVG_NS = "http://www.w3.org/2000/svg";
+    let maskFrameCount = 0;
+
+    function renderTrash() {
+      Engine.update(engine, 1000 / 60);
+      const bodies = Composite.allBodies(world).filter((body) => !body.isStatic);
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+
+      maskFrameCount += 1;
+      if (maskFrameCount % 2 === 0 && isTrashMode) {
+        maskSVG.setAttribute("viewBox", `0 0 ${vw} ${vh}`);
+        while (trashMask.firstChild) trashMask.removeChild(trashMask.firstChild);
+
+        if (bodies.length === 0) {
+          bannerContainer.style.webkitMaskImage = "none";
+          bannerContainer.style.maskImage = "none";
+        } else {
+          bodies.forEach((body) => {
+            const data = trashBodies.get(body.id);
+            if (!data) return;
+            const { x, y } = body.position;
+            const deg = body.angle * 180 / Math.PI;
+            const img = document.createElementNS(SVG_NS, "image");
+            img.setAttribute("href", data.img.src);
+            img.setAttribute("x", x - data.w / 2);
+            img.setAttribute("y", y - data.h / 2);
+            img.setAttribute("width", data.w);
+            img.setAttribute("height", data.h);
+            img.setAttribute("transform", `rotate(${deg},${x},${y})`);
+            trashMask.appendChild(img);
+          });
+
+          bannerContainer.style.webkitMaskImage = "url(#trash-mask)";
+          bannerContainer.style.maskImage = "url(#trash-mask)";
+        }
+      }
+
+      requestAnimationFrame(renderTrash);
+    }
+
+    let isDragging = false;
+    let trashDragCount = 0;
+    let trashZoomCount = 0;
+
+    document.addEventListener("click", (event) => {
+      if (!trashInteractionEnabled || isInfoOpen()) return;
+      if (isUiTarget(event.target)) return;
+      dropTrash(event.clientX);
+    });
+
+    document.addEventListener("mousedown", (event) => {
+      if (isUiTarget(event.target)) return;
+      isDragging = true;
+    });
+
+    document.addEventListener("mousemove", (event) => {
+      if (!isDragging || !trashInteractionEnabled || isInfoOpen()) return;
+      if (++trashDragCount % 10 === 0) dropTrash(event.clientX);
+    });
+
+    document.addEventListener("mouseup", () => {
+      isDragging = false;
+    });
+
+    document.addEventListener("touchstart", (event) => {
+      if (isUiTarget(event.target)) return;
+      isDragging = true;
+    }, { passive: true });
+
+    document.addEventListener("touchmove", (event) => {
+      if (!isDragging || !trashInteractionEnabled || isInfoOpen()) return;
+      if (++trashDragCount % 10 === 0) dropTrash(event.touches[0].clientX);
+    }, { passive: true });
+
+    document.addEventListener("touchend", () => {
+      isDragging = false;
+    });
+
+    function hookZoomTrash() {
+      if (!window.panorama) {
+        setTimeout(hookZoomTrash, 500);
+        return;
+      }
+
+      window.panorama.addListener("zoom_changed", () => {
+        if (!trashInteractionEnabled || isInfoOpen()) return;
+        if (++trashZoomCount % 10 === 0) dropTrash();
+      });
+    }
+
+    hookZoomTrash();
+    window.addEventListener("resize", updateBoundaries);
+    loadTrashSVGs(renderTrash);
+
+    setLang("ko");
+    updateSliderVisuals();
+    setMode(false);
+    startHeaderChroma();
+  </script>
+</body>
+</html>
